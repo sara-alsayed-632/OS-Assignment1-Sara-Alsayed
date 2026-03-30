@@ -30,20 +30,33 @@ class Process implements Runnable {
     private int timeQuantum; // Time slice (time quantum) allowed per CPU access (in milliseconds)
     private int remainingTime; // Time left for the process to finish its execution
     private int priority;
+    // Feature 3: Waiting Time
+    private long arrivalTime;
+    private long waitingTime = 0;
 
     // Constructor to initialize the process with name, burst time, and time quantum
+    /**
+     * @param name
+     * @param burstTime
+     * @param timeQuantum
+     * @param priority
+     */
     public Process(String name, int burstTime, int timeQuantum, int priority) {
         this.name = name;
         this.burstTime = burstTime;
         this.timeQuantum = timeQuantum;
         this.remainingTime = burstTime; // Initially, remaining time is equal to the burst time
         this.priority = priority;  // Feature 1
+        this.arrivalTime = System.currentTimeMillis();
     }
 
     // This method will be called when the thread for this process is started
     @Override
     public void run() {
         // Simulate running for either the time quantum or remaining time, whichever is smaller
+        long now = System.currentTimeMillis();
+        waitingTime += (now - arrivalTime);
+        arrivalTime = now;
         int runTime = Math.min(timeQuantum, remainingTime); // Run for the smaller of the two times
         
         // Show quantum execution starting
@@ -147,6 +160,13 @@ class Process implements Runnable {
     public int getPriority() {
         return priority;
     }
+
+    public long getWaitingTime() {
+    return waitingTime;
+}
+    public void setArrivalTime(long time) {
+    this.arrivalTime = time;
+}
 }
 
 public class SchedulerSimulation {
@@ -274,12 +294,22 @@ static int contextSwitchCount = 0;
                 }
             }
         }
+        System.out.println(Colors.BRIGHT_CYAN + "\n===== Waiting Time Summary =====" + Colors.RESET);
+
+        System.out.printf("%-10s %-15s %-15s\n", "Process", "Burst Time", "Waiting Time");
+
+        for (Process process : processMap.values()) {
+        System.out.printf("%-10s %-15d %-15d\n",
+            process.getName(),
+            process.getBurstTime(),
+            process.getWaitingTime());
+       }
         
         // End of the scheduler simulation
         System.out.println(Colors.BRIGHT_YELLOW + 
         "  🔄 Total context switches: " + contextSwitchCount + 
          Colors.RESET);
-         
+
         System.out.println(Colors.BOLD + Colors.BRIGHT_GREEN + 
                           "╔════════════════════════════════════════════════════════════════════════════════╗" + 
                           Colors.RESET);
@@ -303,6 +333,8 @@ static int contextSwitchCount = 0;
         
         // Map the thread to the process, so we can track the process associated with each thread
         processMap.put(thread, process);
+
+        process.setArrivalTime(System.currentTimeMillis());
         
         // Print a message indicating the process has entered the ready queue
         System.out.println(Colors.BLUE + "  ➕ " + Colors.BOLD + Colors.CYAN + process.getName() +  
